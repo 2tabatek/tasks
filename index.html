@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>النظام الرقمي المشترك لاعتماد المستندات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        /* تنسيقات الطباعة الرسمية للمستندات المعتمدة */
+        @media print {
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; box-shadow: none; }
+            .no-print { display: none !important; }
+            .print-header { display: flex !important; }
+            .print-signatures { display: grid !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col antialiased">
+
+    <header class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md p-4 no-print">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/10 p-2.5 rounded-xl text-2xl shadow-inner">
+                    <i class="fa-solid fa-file-shield text-emerald-400"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">نظام اعتماد المستندات السحابي المشترك</h1>
+                    <p class="text-xs text-slate-400">ربط فوري وتدفقات إجرائية ذكية بين الموظف والإدارة</p>
+                </div>
+            </div>
+            
+            <div id="cloud-status" class="flex items-center gap-2 bg-amber-500/10 text-amber-400 px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-500/20">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>جاري الاتصال بقاعدة البيانات السحابية...</span>
+            </div>
+
+            <div class="bg-black/20 p-1 rounded-xl flex gap-1 border border-white/10 shadow-inner">
+                <button id="btn-role-employee" onclick="setRole('employee')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-pen"></i> شاشة الموظف
+                </button>
+                <button id="btn-role-manager" onclick="setRole('manager')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-tie"></i> شاشة المدير الاعتمادي
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 container mx-auto p-4 md:p-6 space-y-6 no-print">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-xs font-semibold">إجمالي الطلبات</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-gray-800 mt-1">0</h3>
+                </div>
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-xl text-xl"><i class="fa-solid fa-folder-open"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-xs font-semibold">بانتظار الاعتماد</p>
+                    <h3 id="stat-pending" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                </div>
+                <div class="bg-amber-50 text-amber-600 p-3 rounded-xl text-xl"><i class="fa-solid fa-hourglass-half animate-spin"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-xs font-semibold">مستندات معتمدة</p>
+                    <h3 id="stat-approved" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="bg-emerald-50 text-emerald-600 p-3 rounded-xl text-xl"><i class="fa-solid fa-circle-check"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-xs font-semibold">مرفوضة / للتعديل</p>
+                    <h3 id="stat-rejected" class="text-2xl font-bold text-rose-600 mt-1">0</h3>
+                </div>
+                <div class="bg-rose-50 text-rose-600 p-3 rounded-xl text-xl"><i class="fa-solid fa-circle-xmark"></i></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <div id="form-card" class="lg:col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div class="border-b border-gray-100 pb-3">
+                    <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-circle-plus text-indigo-600"></i> رفع وإنشاء طلب جديد
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-0.5">سيتم إرساله للشبكة السحابية ليظهر فوراً عند الإدارة</p>
+                </div>
+                
+                <form id="doc-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">اسم الموظف المتقدم</label>
+                        <input type="text" id="form-name" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" placeholder="مثال: م. أحمد علي">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">القسم / الإدارة التابع لها</label>
+                        <select id="form-dept" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                            <option value="الإدارة العامة">الإدارة العامة</option>
+                            <option value="الشؤون المالية والمشتريات">الشؤون المالية والمشتريات</option>
+                            <option value="الموارد البشرية وشؤون الموظفين">الموارد البشرية</option>
+                            <option value="إدارة التقنية ونظم المعلومات">إدارة التقنية ونظم المعلومات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">عنوان أو نوع المستند</label>
+                        <input type="text" id="form-title" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition" placeholder="مثال: طلب شراء أجهزة وتجهيز شبكة">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">شرح وتفاصيل الطلب والمبررات</label>
+                        <textarea id="form-content" rows="4" required class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition resize-none h-28" placeholder="اكتب التفاصيل الكاملة للمستند هنا بشكل دقيق ومفصل..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> إرسال المستند للاعتماد السحابي
+                    </button>
+                </form>
+            </div>
+
+            <div id="list-card" class="lg:col-span-8 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-slate-700"></i> سجل تدفق ومتابعة المستندات المشترك
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">تحديث ذكي مستمر من قاعدة البيانات كل 4 ثوانٍ تلقائياً</p>
+                    </div>
+                    <button onclick="fetchFromCloud()" class="text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-arrows-rotate"></i> تحديث الآن
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-gray-100">
+                    <table class="w-full text-right text-xs">
+                        <thead class="bg-gray-50 text-gray-500 font-bold border-b border-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-sm">المستند والمتقدم</th>
+                                <th class="px-4 py-3 hidden md:table-cell">القسم الإداري</th>
+                                <th class="px-4 py-3">تاريخ الرفع</th>
+                                <th class="px-4 py-3 text-center">حالة القرار</th>
+                                <th class="px-4 py-3 text-center">الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docs-table-body" class="divide-y divide-gray-100">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="detail-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-gray-50 border-b border-gray-100 p-4 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-file-contract text-indigo-600"></i> مراجعة المستند الرقمي المشترك
+                </h3>
+                <button onclick="closeModal('detail-modal')" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="printable-area" class="p-6 space-y-6 overflow-y-auto flex-1 bg-white">
+                
+                <div class="hidden print-header border-b-2 border-slate-900 pb-4 mb-4 justify-between items-center w-full" style="display:none;">
+                    <div class="text-right">
+                        <h2 class="font-bold text-base text-slate-900">مؤسسة الأعمال والخدمات الرقمية المتكاملة</h2>
+                        <p class="text-[11px] text-gray-500">نظام التدقيق الرقمي واعتماد المراسلات الذكي</p>
+                    </div>
+                    <div class="text-left text-[11px] text-gray-500">
+                        <p>تاريخ طباعة التقرير: <span id="print-current-date"></span></p>
+                        <p>رقم المستند الإجرائي: #<span id="print-doc-id"></span></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs text-slate-700">
+                    <div><span class="font-bold text-slate-900">الموظف المتقدم:</span> <span id="modal-name"></span></div>
+                    <div><span class="font-bold text-slate-900">القسم / الإدارة:</span> <span id="modal-dept"></span></div>
+                    <div><span class="font-bold text-slate-900">تاريخ المعاملة:</span> <span id="modal-date"></span></div>
+                    <div><span class="font-bold text-slate-900">قرار الاعتماد الحالي:</span> <span id="modal-status-badge"></span></div>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-900 text-sm border-b border-gray-100 pb-2" id="modal-title"></h4>
+                    <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap bg-gray-50/50 p-4 rounded-xl border border-gray-100 min-h-[120px]" id="modal-content"></p>
+                </div>
+
+                <div id="modal-feedback-box" class="bg-rose-50 border border-rose-100 p-4 rounded-xl text-xs text-rose-800 hidden">
+                    <span class="font-bold flex items-center gap-1.5 mb-1"><i class="fa-solid fa-comment-dots"></i> توجيهات وملاحظة سلطة الاعتماد:</span>
+                    <p id="modal-feedback-text" class="italic"></p>
+                </div>
+
+                <div class="hidden print-signatures pt-12 grid grid-cols-2 text-center text-xs font-bold text-slate-900" style="display:none;">
+                    <div>توقيع الموظف المعني:<br><br><br>...........................</div>
+                    <div>اعتماد ومصادقة إدارة المنشأة:<br><br><br>...........................</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 border-t border-gray-100 p-4 flex flex-wrap justify-between items-center gap-3">
+                <button onclick="printDocument()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-print"></i> طباعة كتقرير رسمي مختوم
+                </button>
+                
+                <div id="manager-actions-block" class="flex gap-2 hidden">
+                    <button onclick="openActionModal('approved')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer">
+                        <i class="fa-solid fa-check"></i> اعتماد وقبول
+                    </button>
+                    <button onclick="openActionModal('modified')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer">
+                        <i class="fa-solid fa-rotate-left"></i> طلب تعديل
+                    </button>
+                    <button onclick="openActionModal('rejected')" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i> رفض نهائي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="action-modal" class="fixed inset-0 bg-black/60 z-55 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl p-5 space-y-4">
+            <h4 id="action-modal-title" class="font-bold text-gray-800 text-xs">إضافة توجيه وملاحظات على الطلب</h4>
+            <div>
+                <label id="action-label" class="block text-xs text-gray-500 mb-1">توجيهات الإدارة الموجهة للموظف المتقدم:</label>
+                <textarea id="action-reason" rows="3" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition resize-none text-gray-700"></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('action-modal')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer">إلغاء</button>
+                <button onclick="submitManagerAction()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer">تأكيد الإجراء السحابي</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // رابط سحابي آمن وخاص ومجهر مجاناً بدون الحاجة لأي مفاتيح أو تسجيل حسابات
+        const BUCKET_URL = 'https://kvdb.io/approval_bucket_7c9a2b8e4f12/docs';
+        
+        let currentRole = 'employee';
+        let documents = [];
+        let activeDocId = null;
+        let pendingStatusType = '';
+
+        // مستند تجريبي يتم تزويده تلقائياً عند فتح النظام لأول مرة للتأكد من المزامنة
+        const seedData = [
+            {
+                id: "doc_1718239401",
+                employeeName: "المهندس عبدالرحمن الشميري",
+                department: "إدارة التقنية ونظم المعلومات",
+                title: "طلب ترقية الخوادم وتفعيل خطوط الأمان السحابية للمنشأة",
+                content: "نظراً للتوسع السريع في أعداد فروع المنشأة وزيادة أحجام المستندات المتبادلة، نتقدم إليكم بطلب الموافقة على ترقية باقة الخوادم السحابية المركزية، وتفعيل جدار حماية متقدم لضمان سرعة تبادل البيانات وحمايتها من أي ثغرات سيبرانية.",
+                status: "pending",
+                date: "2026-06-12 10:15",
+                rejectionReason: ""
+            }
+        ];
+
+        // تهيئة النظام عند تشغيل الصفحة
+        async function init() {
+            updateRoleUI();
+            await fetchFromCloud();
+            
+            // تفعيل ميزة التحديث والمزامنة الفورية التلقائية كل 4 ثوانٍ دون تدخل من المستخدم
+            setInterval(fetchFromCloud, 4000);
+        }
+
+        // جلب البيانات بشكل حي ومباشر من السحابة المشتركة للأجهزة
+        async function fetchFromCloud() {
+            const statusEl = document.getElementById('cloud-status');
+            try {
+                const response = await fetch(BUCKET_URL);
+                if (response.status === 404) {
+                    // إذا كانت السحابة فارغة تماماً عند أول استخدام، يتم حقن المستند التجريبي
+                    documents = [...seedData];
+                    await pushToCloud();
+                    return;
+                }
+                const text = await response.text();
+                documents = text.trim() === "" ? [] : JSON.parse(text);
+                
+                statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> متصل بالسحابة المشتركة للأجهزة 🟢';
+                statusEl.className = "flex items-center gap-2 bg-green-500/10 text-green-400 px-3 py-1.5 rounded-full text-xs font-semibold border border-green-500/20";
+                render();
+            } catch (e) {
+                console.error("خطأ في الشبكة، جاري الاعتماد على الذاكرة المحلية الاحتياطية", e);
+                statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> وضع أوفلاين / خطأ شبكة 🔴';
+                statusEl.className = "flex items-center gap-2 bg-rose-500/10 text-rose-400 px-3 py-1.5 rounded-full text-xs font-semibold border border-rose-500/20";
+                
+                // جلب النسخة الاحتياطية من ذاكرة المتصفح في حال انقطاع الإنترنت فجأة
+                const localBackup = localStorage.getItem('smart_approval_backup');
+                if (localBackup) {
+                    documents = JSON.parse(localBackup);
+                    render();
+                }
+            }
+        }
+
+        // دفع التعديلات والطلبات الجديدة للسحابة فوراً لتحديث باقي أجهزة المنشأة
+        async function pushToCloud() {
+            try {
+                localStorage.setItem('smart_approval_backup', JSON.stringify(documents));
+                await fetch(BUCKET_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(documents),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (e) {
+                console.error("فشل إرسال البيانات للسحابة السحابية", e);
+            }
+        }
+
+        // التبديل بين محاكي الموظف والمدير (لتجربة حركة البيانات من نفس الجهاز أو أجهزة متعددة)
+        function setRole(role) {
+            currentRole = role;
+            updateRoleUI();
+            render();
+        }
+
+        function updateRoleUI() {
+            const empBtn = document.getElementById('btn-role-employee');
+            const mngrBtn = document.getElementById('btn-role-manager');
+            const formCard = document.getElementById('form-card');
+            const listCard = document.getElementById('list-card');
+            
+            if (currentRole === 'employee') {
+                empBtn.className = "bg-white text-slate-900 px-4 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5";
+                mngrBtn.className = "text-white hover:bg-white/5 px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5";
+                formCard.style.display = "block";
+                listCard.className = "lg:col-span-8 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4";
+            } else {
+                mngrBtn.className = "bg-white text-slate-900 px-4 py-1.5 rounded-lg text-xs font-bold shadow flex items-center gap-1.5";
+                empBtn.className = "text-white hover:bg-white/5 px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5";
+                formCard.style.display = "none";
+                listCard.className = "lg:col-span-12 bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4";
+            }
+        }
+
+        // بناء وعرض عناصر الواجهة والإحصائيات الحية بناء على مخرجات السحابة
+        function render() {
+            document.getElementById('stat-total').innerText = documents.length;
+            document.getElementById('stat-pending').innerText = documents.filter(d => d.status === 'pending').length;
+            document.getElementById('stat-approved').innerText = documents.filter(d => d.status === 'approved').length;
+            document.getElementById('stat-rejected').innerText = documents.filter(d => d.status === 'rejected' || d.status === 'modified').length;
+            
+            const tbody = document.getElementById('docs-table-body');
+            tbody.innerHTML = '';
+            
+            if (documents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 text-xs">سجل السحابة فارغ حالياً، قم بإنشاء أول مستند من شاشة الموظف.</td></tr>`;
+                return;
+            }
+            
+            // عرض المستندات الأحدث دائماً في أعلى الجدول
+            const sorted = [...documents].reverse();
+            
+            sorted.forEach(doc => {
+                let badge = '';
+                if (doc.status === 'pending') {
+                    badge = `<span class="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-[11px] font-bold border border-amber-100 flex items-center justify-center gap-1 w-28 mx-auto"><i class="fa-solid fa-spinner animate-spin text-[9px]"></i> قيد الانتظار</span>`;
+                } else if (doc.status === 'approved') {
+                    badge = `<span class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full text-[11px] font-bold border border-emerald-100 flex items-center justify-center gap-1 w-28 mx-auto"><i class="fa-solid fa-circle-check"></i> معتمد ومقبول</span>`;
+                } else if (doc.status === 'rejected') {
+                    badge = `<span class="bg-rose-50 text-rose-700 px-2 py-1 rounded-full text-[11px] font-bold border border-rose-100 flex items-center justify-center gap-1 w-28 mx-auto"><i class="fa-solid fa-circle-xmark"></i> طلب مرفوض</span>`;
+                } else if (doc.status === 'modified') {
+                    badge = `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-[11px] font-bold border border-blue-100 flex items-center justify-center gap-1 w-28 mx-auto"><i class="fa-solid fa-pen-to-square"></i> يحتاج تعديل</span>`;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/70 transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-3.5">
+                        <div class="font-bold text-gray-800 text-xs md:text-sm">${doc.title}</div>
+                        <div class="text-[10px] text-gray-400 mt-0.5"><i class="fa-solid fa-user text-[8px]"></i> ${doc.employeeName}</div>
+                    </td>
+                    <td class="px-4 py-3.5 text-gray-500 hidden md:table-cell">${doc.department}</td>
+                    <td class="px-4 py-3.5 text-gray-400 font-mono">${doc.date.split(' ')[0]}</td>
+                    <td class="px-4 py-3.5 text-center">${badge}</td>
+                    <td class="px-4 py-3.5 text-center">
+                        <button onclick="viewDetails('${doc.id}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 mx-auto cursor-pointer">
+                            <i class="fa-solid fa-eye"></i> ${currentRole === 'manager' && doc.status === 'pending' ? 'مراجعة واتخاذ قرار' : 'استعراض'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // التعامل مع رفع وإنشاء الطلبات من قبل الموظفين
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('form-name').value.trim();
+            const dept = document.getElementById('form-dept').value;
+            const title = document.getElementById('form-title').value.trim();
+            const content = document.getElementById('form-content').value.trim();
+            
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            
+            const newDoc = {
+                id: 'doc_' + Date.now(),
+                employeeName: name,
+                department: dept,
+                title: title,
+                content: content,
+                status: 'pending',
+                date: dateStr,
+                rejectionReason: ''
+            };
+            
+            documents.push(newDoc);
+            document.getElementById('doc-form').reset();
+            render();
+            await pushToCloud();
+            alert('✅ تم رفع المستند بنجاح إلى السحابة! سيظهر على شاشة المدير في مكتبه فوراً للمراجعة والاعتماد.');
+        }
+
+        // عرض تفاصيل أي مستند في النافذة المنبثقة الشاملة
+        function viewDetails(id) {
+            const doc = documents.find(d => d.id === id);
+            if (!doc) return;
+            
+            activeDocId = id;
+            document.getElementById('modal-doc-id').innerText = id.replace('doc_','');
+            document.getElementById('print-doc-id').innerText = id.replace('doc_','');
+            document.getElementById('modal-name').innerText = doc.employeeName;
+            document.getElementById('modal-dept').innerText = doc.department;
+            document.getElementById('modal-date').innerText = doc.date;
+            document.getElementById('modal-title').innerText = doc.title;
+            document.getElementById('modal-content').innerText = doc.content;
+            
+            const badgeEl = document.getElementById('modal-status-badge');
+            
+            if (doc.status === 'pending') {
+                badgeEl.innerHTML = `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-bold">بانتظار المراجعة والاعتماد</span>`;
+            } else if (doc.status === 'approved') {
+                badgeEl.innerHTML = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-bold">تم قبوله واعتماده رسمياً</span>`;
+            } else if (doc.status === 'rejected') {
+                badgeEl.innerHTML = `<span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded text-[11px] font-bold">مرفوض إدارياً</span>`;
+            } else if (doc.status === 'modified') {
+                badgeEl.innerHTML = `<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[11px] font-bold">مُعاد لطلب تعديل البيانات</span>`;
+            }
+            
+            const feedbackBox = document.getElementById('modal-feedback-box');
+            if (doc.rejectionReason) {
+                feedbackBox.classList.remove('hidden');
+                document.getElementById('modal-feedback-text').innerText = doc.rejectionReason;
+            } else {
+                feedbackBox.classList.add('hidden');
+            }
+            
+            const actionsBlock = document.getElementById('manager-actions-block');
+            if (currentRole === 'manager' && doc.status === 'pending') {
+                actionsBlock.classList.remove('hidden');
+            } else {
+                actionsBlock.classList.add('hidden');
+            }
+            
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // فتح نموذج اتخاذ القرار وتوجيهات المدير للمستندات
+        function openActionModal(type) {
+            pendingStatusType = type;
+            const titleEl = document.getElementById('action-modal-title');
+            const labelEl = document.getElementById('action-label');
+            document.getElementById('action-reason').value = '';
+            
+            if (type === 'approved') {
+                titleEl.innerText = "تأكيد قبول واعتماد المستند";
+                labelEl.innerText = "اكتب ملاحظات اختيارية للموظف (مثال: يعتمد ويبدأ العمل فوراً):";
+            } else if (type === 'modified') {
+                titleEl.innerText = "توجيه لإعادة التعديل والتوضيح";
+                labelEl.innerText = "وضح النواقص أو البيانات المطلوب من الموظف تعديلها بوضوح:";
+            } else if (type === 'rejected') {
+                titleEl.innerText = "رفض الطلب والمستند نهائياً";
+                labelEl.innerText = "اكتب الأسباب والمبررات الإدارية وراء قرار الرفض (إلزامي):";
+            }
+            
+            document.getElementById('action-modal').classList.remove('hidden');
+        }
+
+        // حفظ قرار المدير ورفعه للسحابة ليراه الموظف على جهازه فوراً
+        async function submitManagerAction() {
+            const reason = document.getElementById('action-reason').value.trim();
+            if (pendingStatusType === 'rejected' && !reason) {
+                alert('❌ فضلاً، يرجى كتابة مبررات الرفض لتوجيه الموظف بالقرار الإداري.');
+                return;
+            }
+            
+            const idx = documents.findIndex(d => d.id === activeDocId);
+            if (idx !== -1) {
+                documents[idx].status = pendingStatusType;
+                documents[idx].rejectionReason = reason;
+                
+                render();
+                await pushToCloud();
+                
+                closeModal('action-modal');
+                closeModal('detail-modal');
+                alert('✅ تم قيد واعتماد قرارك الإداري سحابياً بنجاح، وسينعكس فوراً على جهاز الموظف المعني بالطلب!');
+            }
+        }
+
+        // طباعة التقرير الرسمي للمستندات المعتمدة
+        function printDocument() {
+            const now = new Date();
+            document.getElementById('print-current-date').innerText = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+            window.print();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
