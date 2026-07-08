@@ -3,18 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة الموافقات والطلبات الإلكتروني</title>
+    <title>نظام إدارة الطلبات والموافقات</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f4f7f9; padding: 20px; text-align: center; direction: rtl; }
-        .box { background: white; max-width: 600px; margin: 50px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #1f4e78; }
-        p { color: #333; font-size: 16px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #1f4e78; text-align: center; }
+        .section { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+        button { background-color: #1f4e78; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #153a5c; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #f8f9fa; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>تم تشغيل النظام بنجاح!</h1>
-        <p>النظام يعمل الآن بشكل ممتاز عبر GitHub Pages.</p>
+
+<div class="container">
+    <h1>نظام إدارة الطلبات</h1>
+
+    <!-- قسم تقديم طلب -->
+    <div class="section">
+        <h3>تقديم طلب جديد</h3>
+        <input type="text" placeholder="اكتب تفاصيل الطلب هنا...">
+        <button onclick="alert('تم إرسال الطلب بنجاح!')">إرسال الطلب</button>
     </div>
+
+    <!-- قسم قائمة الموافقات -->
+    <div class="section">
+        <h3>قائمة الموافقات</h3>
+        <table>
+            <tr>
+                <th>اسم الطلب</th>
+                <th>الحالة</th>
+            </tr>
+            <tr>
+                <td>طلب إجازة</td>
+                <td>بانتظار الموافقة</td>
+            </tr>
+            <tr>
+                <td>طلب صرف عهدة</td>
+                <td>موافق عليه</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
 </body>
 </html>
